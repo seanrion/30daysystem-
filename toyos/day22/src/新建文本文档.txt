@@ -1,0 +1,15 @@
+if (finfo->size >= 36 && strncmp(p, "MZ", 2) == 0 ) {
+			segsiz = *((int *) (p + 0x01a8))+0x3000;
+			esp    = 1024*64;
+			datsiz = *((int *) (p + 0x01a8))+0x3000;
+			dathrb = *((int *) (p + 0x01b4));
+			codhrb = *((int *) (p + 0x018c));
+			q = (char *) memman_alloc_4k(memman, segsiz);
+			*((int *) 0xfe8) = (int) (q+esp);
+			set_segmdesc(gdt + 1003, finfo->size - 1, (int) p, AR_CODE32_ER + 0x60);
+			set_segmdesc(gdt + 1004, segsiz - 1 + esp,      (int) q, AR_DATA32_RW + 0x60);
+			for (i = 0; i < datsiz; i++) {
+				q[i + esp] = p[dathrb + i];
+			}
+			start_app(codhrb, 1003 * 8, esp-8, 1004 * 8, &(task->tss.esp0));
+			memman_free_4k(memman, (int) q, segsiz);
